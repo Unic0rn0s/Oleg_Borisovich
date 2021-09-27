@@ -1,8 +1,15 @@
 from vkbottle.bot import Bot, Message
 from vkbottle import Keyboard, KeyboardButtonColor, Text, EMPTY_KEYBOARD
 from config import token
+import datetime as dt
 
 bot = Bot(token=token)
+
+LESSONS_TIMES = {dt.datetime(2021, 9, 21, 12, 40, 0),
+                 dt.datetime(2021, 9, 21, 13, 35, 0),
+                 dt.datetime(2021, 9, 23, 11, 40, 0),
+                 dt.datetime(2021, 9, 24, 8, 40, 0),
+                 dt.datetime(2021, 9, 24, 9, 35, 0)}
 
 
 # ---------------------------------- Главное меню ----------------------------------
@@ -12,6 +19,8 @@ async def main_menu(message: Message):
     keyboard = Keyboard().add(Text('Абоба', {'cmd': 'aboba'}))\
         .add(Text('Мы поняли', {'cmd': 'understand'})).row()\
         .add(Text('Умные вещи', {'cmd': 'physics'})).row()\
+        .add(Text('Время до следующего урока физики', {'cmd': 'time'})).row()\
+        .add(Text('Help', {'cmd': 'help'}), color=KeyboardButtonColor.PRIMARY).row()\
         .add(Text('До свидания, Олег Борисович!', {'cmd': 'end'}), color=KeyboardButtonColor.POSITIVE)
     await message.answer('Главное меню получается', keyboard=keyboard)
 
@@ -19,13 +28,25 @@ async def main_menu(message: Message):
 # Абоба
 @bot.on.chat_message(payload={'cmd': 'aboba'})
 async def aboba(message: Message):
-    await message.answer('Я вам запрещаю сдавать ЕГЭ не на 100 баллов')
+    await message.answer(aboba_text)
 
 
 # Мы поняли
 @bot.on.chat_message(payload={'cmd': 'understand'})
 async def understand(message: Message):
     await message.answer('Не поняли? ... Ну понятно? Ещё объяснить? Давайте другой пример приведу ... Сложно, да?')
+
+
+# Время до следующего урока физики
+@bot.on.chat_message(payload={'cmd': 'time'})
+async def time(message: Message):
+    correct = set()
+    now = dt.datetime.now()
+    today = dt.datetime(2021, 9, 20 + now.weekday(), now.hour, now.minute, now.second)
+    for lesson in LESSONS_TIMES:
+        if lesson > today:
+            correct.add(lesson-today)
+    await message.answer(f'Fisting ass через: {min(correct)}')
 
 
 # До свидания
@@ -88,5 +109,33 @@ async def f6(message: Message):
 async def back(message: Message):
     await message.answer('Меняю направление вектора...')
     await main_menu(message)
+
+
+# ---------------------------------- Help ----------------------------------
+aboba_text = 'Я вам запрещаю сдавать ЕГЭ не на 100 баллов'
+commands = ['(!) Текст Абобы откатывается при каждом перезапуске Олега Борисовича',
+            'Забиндить Абобу: /aboba текст',
+            'Посмотреть текст Абобы: /aboba_info']
+
+
+@bot.on.chat_message(payload={'cmd': 'help'})
+async def help_cmd(message: Message):
+    await message.answer('\n'.join(commands))
+
+
+@bot.on.chat_message(text=['/aboba <text>', '/aboba'])
+async def aboba_bind(message: Message, text=None):
+    global aboba_text
+    if text is not None:
+        await message.answer(f'Новый текст Абобы: {text}')
+        aboba_text = text
+    else:
+        await message.answer('Чел, ты зафейлил: Текст не указан')
+
+
+@bot.on.chat_message(text=['/aboba_info'])
+async def aboba_info(message: Message):
+    await message.answer(f'Текущий текст Абобы: {aboba_text}')
+
 
 bot.run_forever()
